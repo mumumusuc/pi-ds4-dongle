@@ -1,0 +1,261 @@
+Usage Page (Desktop),               ; Generic desktop controls (01h)
+Usage (Gamepad),                    ; Gamepad (05h, application collection)
+Collection (Application),
+/* start ID1 */
+    Report ID (1),
+    Usage (X),                      ; X (30h, dynamic value)
+    Usage (Y),                      ; Y (31h, dynamic value)
+    Usage (Z),                      ; Z (32h, dynamic value)
+    Usage (Rz),                     ; Rz (35h, dynamic value)
+    Logical Minimum (0),
+    Logical Maximum (255),
+    Report Size (8),
+    Report Count (4),
+    Input (Variable),
+    Usage (Hat Switch),             ; Hat switch (39h, dynamic value)
+    Logical Minimum (0),
+    Logical Maximum (7),
+    Report Size (4),
+    Report Count (1),
+    Input (Variable, Null State),
+    Usage Page (Button),            ; Button (09h)
+    Usage Minimum (01h),
+    Usage Maximum (0Eh),
+    Logical Minimum (0),
+    Logical Maximum (1),
+    Report Size (1),
+    Report Count (14),
+    Input (Variable),
+    Report Size (6),
+    Report Count (1),
+    Input (Constant),
+
+    Usage Page (Desktop),           ; Generic desktop controls (01h)
+    Usage (Rx),                     ; Rx (33h, dynamic value)
+    Usage (Ry),                     ; Ry (34h, dynamic value)
+    Logical Minimum (0),
+    Logical Maximum (255),
+    Report Size (8),
+    Report Count (2),
+    Input (Variable),
+
+    Usage Page (FF04h),             ; FF04h, vendor-defined
+/* start ID2 */
+    Report ID (2),
+    Usage (24h),
+    Report Count (36),
+    Feature (Variable),
+/* start ID163 */
+    Report ID (163),
+    Usage (25h),
+    Report Count (48),
+    Feature (Variable),
+/* start ID5 */
+    Report ID (5),
+    Usage (26h),
+    Report Count (40),
+    Feature (Variable),
+/* start ID6 */
+    Report ID (6),
+    Usage (27h),
+    Report Count (52),
+    Feature (Variable),
+/* start ID7 */
+    Report ID (7),
+    Usage (28h),
+    Report Count (48),
+    Feature (Variable),
+/* start ID8 */
+    Report ID (8),
+    Usage (29h),
+    Report Count (47),
+    Feature (Variable),
+/* start ID9 */
+    Report ID (9),
+    Usage (2Ah),
+    Report Count (19),
+    Feature (Variable),
+    Usage Page (FF03h),             ; FF03h, vendor-defined
+/* start ID3 */
+    Report ID (3),
+    Usage (21h),
+    Report Count (38),
+    Feature (Variable),
+/* start ID4 */
+    Report ID (4),
+    Usage (22h),
+    Report Count (46),
+    Feature (Variable),
+/* start ID240 */
+    Report ID (240),
+    Usage (47h),
+    Report Count (63),
+    Feature (Variable),
+/* start ID241 */
+    Report ID (241),
+    Usage (48h),
+    Report Count (63),
+    Feature (Variable),
+/* start ID242 */
+    Report ID (242),
+    Usage (49h),
+    Report Count (15),
+    Feature (Variable),
+    Usage Page (FF00h),             ; FF00h, vendor-defined
+/* start ID17 */
+    Report ID (17),
+    Usage (20h),
+    Logical Minimum (0),
+    Logical Maximum (255),
+    Report Size (8),
+    Report Count (77),
+    Input (Variable),
+    Usage (21h),
+    Output (Variable),
+/* start ID18 */
+    Report ID (18),
+    Usage (22h),
+    Report Count (141),
+    Input (Variable),
+    Usage (23h),
+    Output (Variable),
+/* start ID19 */
+    Report ID (19),
+    Usage (24h),
+    Report Count (205),
+    Input (Variable),
+    Usage (25h),
+    Output (Variable),
+/* start ID20 */
+    Report ID (20),
+    Usage (26h),
+    Report Count (269),
+    Input (Variable),
+    Usage (27h),
+    Output (Variable),
+/* start ID21 */
+    Report ID (21),
+    Usage (28h),
+    Report Count (333),
+    Input (Variable),
+    Usage (29h),
+    Output (Variable),
+/* start ID22 */
+    Report ID (22),
+    Usage (2Ah),
+    Report Count (397),
+    Input (Variable),
+    Usage (2Bh),
+    Output (Variable),
+/* start ID23 */
+    Report ID (23),
+    Usage (2Ch),
+    Report Count (461),
+    Input (Variable),
+    Usage (2Dh),
+    Output (Variable),
+/* start ID24 */
+    Report ID (24),
+    Usage (2Eh),
+    Report Count (525),
+    Input (Variable),
+    Usage (2Fh),
+    Output (Variable),
+/* start ID25 */
+    Report ID (25),
+    Usage (30h),
+    Report Count (546),
+    Input (Variable),
+    Usage (31h),
+    Output (Variable),
+    Usage Page (FF80h),             ; FF80h, vendor-defined
+/* start ID130 */
+    Report ID (130),
+    Usage (22h),
+    Report Count (63),
+    Feature (Variable),
+/* start ID131 */
+    Report ID (131),
+    Usage (23h),
+    Feature (Variable),
+/* start ID132 */
+    Report ID (132),
+    Usage (24h),
+    Feature (Variable),
+/* start ID144 */
+    Report ID (144),
+    Usage (30h),
+    Feature (Variable),
+/* start ID145 */
+    Report ID (145),
+    Usage (31h),
+    Feature (Variable),
+/* start ID146 */
+    Report ID (146),
+    Usage (32h),
+    Feature (Variable),
+/* start ID147 */
+    Report ID (147),
+    Usage (33h),
+    Feature (Variable),
+/* start ID148 */
+    Report ID (148),
+    Usage (34h),
+    Feature (Variable),
+/* start ID160 */
+    Report ID (160),
+    Usage (40h),
+    Feature (Variable),
+/* start ID164 */
+    Report ID (164),
+    Usage (44h),
+    Feature (Variable),
+/* start ID167 */
+    Report ID (167),
+    Usage (45h),
+    Feature (Variable),
+/* start ID168 */
+    Report ID (168),
+    Usage (45h),
+    Feature (Variable),
+/* start ID169 */
+    Report ID (169),
+    Usage (45h),
+    Feature (Variable),
+/* start ID170 */
+    Report ID (170),
+    Usage (45h),
+    Feature (Variable),
+/* start ID171 */
+    Report ID (171),
+    Usage (45h),
+    Feature (Variable),
+/* start ID172 */
+    Report ID (172),
+    Usage (45h),
+    Feature (Variable),
+/* start ID173 */
+    Report ID (173),
+    Usage (45h),
+    Feature (Variable),
+/* start ID179 */
+    Report ID (179),
+    Usage (45h),
+    Feature (Variable),
+/* start ID180 */
+    Report ID (180),
+    Usage (46h),
+    Feature (Variable),
+/* start ID171 */
+    Report ID (181),
+    Usage (47h),
+    Feature (Variable),
+/* start ID208 */
+    Report ID (208),
+    Usage (40h),
+    Feature (Variable),
+/* start ID212 */
+    Report ID (212),
+    Usage (44h),
+    Feature (Variable),
+End Collection
