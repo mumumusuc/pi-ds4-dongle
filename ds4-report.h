@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <unistd.h>
 
+ssize_t ds4_report_11(uint8_t *report_buf);
+
 /*
  * @params:
  *      frame       : current frames

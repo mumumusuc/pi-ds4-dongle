@@ -9,23 +9,23 @@
 #include <alsa/asoundlib.h>
 #include "ds4-report.h"
 
-#define REPORT_SIZE     550
-#define FRAME_INTERVAL  32
+#define REPORT_SIZE         550
+#define SBC_DEF_FREQ        32000
+#define FRAME_PER_PACKET    4
 
+static int interrupted = 0;
+static uint freq = SBC_DEF_FREQ;
+static int hid_fd;
 static sbc_t sbc;
-static int /*sbc_fd,*/ audio_fd, hid_fd;
 static uint16_t frame;
 static uint8_t report_buf[REPORT_SIZE];
-static size_t inc;
-static uint freq = 16000;
-static ssize_t report_len;
-static char *hid_node = "/dev/hidraw2";
 static snd_pcm_t *cap_handle;
 static snd_pcm_uframes_t frames;
 static size_t sbc_frame_size;
 static uint8_t *pcm_buffer, *sbc_buffer;
+static char *hid_node = "/dev/hidraw2";
 
-struct sbc_config {
+static struct sbc_config {
     uint8_t subbands;
     uint8_t bitpool;
     uint8_t blocks;
@@ -33,8 +33,7 @@ struct sbc_config {
     int dualchannel;
     int snr;
     int msbc;
-};
-static struct sbc_config config = {
+} config = {
         .bitpool = 25,
         .subbands = 8,
         .blocks = 16,
@@ -55,11 +54,12 @@ static int read_audio_data(uint8_t *data, size_t count);
 static void read_pcm_sound(void *);
 
 static void on_time() {
+    size_t inc;
+    ssize_t report_len;
     report_len = ds4_report_17(frame, &inc, report_buf, sbc_buffer);
     write(hid_fd, report_buf, report_len);
-    printf("send sbc data %ld bytes \n", report_len);
     /* read next data */
-    int ret = read_audio_data(sbc_buffer, 4);
+    int ret = read_audio_data(sbc_buffer, FRAME_PER_PACKET);
     if (ret < 0) {
         printf("audio lag.\n");
         return;;
@@ -71,6 +71,8 @@ static void on_time() {
 
 int main(int argc, char *argv[]) {
 
+    if (argc > 1)
+        hid_node = argv[1];
     hid_fd = open(hid_node, O_RDWR);
     if (hid_fd < 0) {
         fprintf(stderr, "open node[%s] failed : %s\n", hid_node, strerror(errno));
@@ -78,16 +80,19 @@ int main(int argc, char *argv[]) {
     }
 
     int ret;
+    size_t packet_interval;
     ret = init_pcm_capture(&cap_handle, &frames, &freq);
     if (ret < 0) {
         perror("init_pcm_playback");
         return ret;
     }
     init_sbc_encoder(&sbc, &config, freq, 2);
-    // 512 bytes
+    /* 8*16/32 = 4ms  */
+    packet_interval = sbc.subbands * sbc.blocks / (freq / 1000) * FRAME_PER_PACKET;
+    /* 512 bytes */
     sbc_frame_size = sbc_get_codesize(&sbc);
     pcm_buffer = (uint8_t *) malloc(sbc_frame_size);
-    sbc_buffer = (uint8_t *) malloc(sbc_frame_size * 4);
+    sbc_buffer = (uint8_t *) malloc(sbc_frame_size * FRAME_PER_PACKET);
 
     struct sigaction act;
     act.sa_handler = on_time;
@@ -96,10 +101,10 @@ int main(int argc, char *argv[]) {
     sigaction(SIGALRM, &act, NULL);
     struct itimerval val;
     val.it_value.tv_sec = 0;
-    val.it_value.tv_usec = FRAME_INTERVAL * 1000;
+    val.it_value.tv_usec = packet_interval * 1000;
     val.it_interval = val.it_value;
     setitimer(ITIMER_REAL, &val, NULL);
-    while (1) {
+    while (!interrupted) {
         sleep(10);
     }
 
@@ -108,36 +113,6 @@ int main(int argc, char *argv[]) {
     sbc_finish(&sbc);
     snd_pcm_drain(cap_handle);
     snd_pcm_close(cap_handle);
-    /*
-    pid_t pid = fork();
-    if (pid < 0) {
-        perror("fork error");
-        exit(-1);
-    } else if (pid == 0) {
-        // child
-        audio_fd = open("record.sbc", O_RDONLY | O_NONBLOCK);
-        usleep(frame_interval);
-        struct sigaction act;
-        act.sa_handler = on_time;
-        act.sa_flags = 0;
-        sigemptyset(&act.sa_mask);
-        sigaction(SIGALRM, &act, NULL);
-        struct itimerval val;
-        val.it_value.tv_sec = 0;
-        val.it_value.tv_usec = frame_interval;
-        val.it_interval = val.it_value;
-        setitimer(ITIMER_REAL, &val, NULL);
-        while (1) {
-            sleep(10);
-        }
-    } else {
-        // parent
-        sbc_fd = open("record.sbc", O_WRONLY | O_CREAT | O_TRUNC, 0644);
-        read_pcm_sound(NULL);
-    }
-    */
-
-
     return 0;
 }
 
@@ -273,92 +248,13 @@ static void init_sbc_encoder(sbc_t *sbc, struct sbc_config *config, uint32_t sam
         sbc_init_msbc(sbc, 0);
         sbc->endian = SBC_BE;
     }
-    fprintf(stderr, "encoding with rate %d, %d blocks, "
-                    "%d subbands, %d bits, allocation method %s, "
-                    "and mode %s\n", sample_rate, config->blocks, config->subbands, config->bitpool,
-            sbc->allocation == SBC_AM_SNR ? "SNR" : "LOUDNESS",
-            sbc->mode == SBC_MODE_MONO ? "MONO" :
-            sbc->mode == SBC_MODE_STEREO ? "STEREO" : "JOINTSTEREO");
+    printf("encoding with rate %d, %d blocks, "
+           "%d subbands, %d bits, allocation method %s, "
+           "and mode %s\n", sample_rate, config->blocks, config->subbands, config->bitpool,
+           sbc->allocation == SBC_AM_SNR ? "SNR" : "LOUDNESS",
+           sbc->mode == SBC_MODE_MONO ? "MONO" :
+           sbc->mode == SBC_MODE_STEREO ? "STEREO" : "JOINTSTEREO");
 }
-
-static void read_pcm_sound(void *param) {
-    int ret;
-    size_t buf_size;
-    uint8_t *buffer;
-    snd_pcm_t *cap_handle;
-    snd_pcm_uframes_t frames;
-    ret = init_pcm_capture(&cap_handle, &frames, &freq);
-    if (ret < 0) {
-        perror("init_pcm_playback");
-        exit(-1);
-    }
-    printf("frame(period_size) = %lu\n", frames);
-    // frame_size = sample_bits * channels / 8 = 16*2/8 = 4 Bytes
-    // period_size = period_frames * frame_size = 1024 * 4 = 4K Bytes
-    buf_size = frames * 4 / 2; // 2K Bytes
-    printf("buf_size = %lu\n", buf_size);
-    buffer = (uint8_t *) malloc(buf_size);
-    uint8_t *output = (uint8_t *) malloc(buf_size);
-
-    int cap_len;
-    sbc_t sbc;
-    ssize_t sbc_len, sbc_encoded;
-    init_sbc_encoder(&sbc, &config, freq, 2);
-    size_t sbc_code_size = sbc_get_codesize(&sbc);
-    size_t sbc_frames = buf_size / sbc_code_size;
-    printf("sbc_code_size = %lu, sbc_frames = %lu\n", sbc_code_size, sbc_frames);
-    struct timeval start, end;
-    size_t dt_cap, dt_encode;
-    uint8_t *_input, *_output;
-
-    while (1) {
-        gettimeofday(&start, NULL);
-        // read 2048 bytes
-        ret = snd_pcm_readi(cap_handle, buffer, frames / 8);
-        if (ret < 0) {
-            perror("snd_pcm_readi");
-            break;
-        }
-        //fprintf(stderr,"read pcm data\n");
-
-        cap_len = ret * 4;
-        gettimeofday(&end, NULL);
-        dt_cap = 1000000 * (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec);
-
-        gettimeofday(&start, NULL);
-        _input = buffer;
-        _output = output;
-        while (cap_len >= sbc_code_size) {
-            sbc_len = sbc_encode(&sbc, _input, sbc_code_size, _output, buf_size - (_output - output), &sbc_encoded);
-            if (sbc_len != sbc_code_size || sbc_encoded <= 0) {
-                fprintf(stderr, "sbc_encode fail, sbc_len=%ld, encoded=%lu\n", sbc_len, (unsigned long) sbc_encoded);
-                break;
-            }
-            //fprintf(stderr, "sbc_encode , sbc_len=%zd, encoded=%lu\n", sbc_len, (unsigned long) sbc_encoded);
-            cap_len -= sbc_len;
-            _input += sbc_len;
-            _output += sbc_encoded;
-        }
-        gettimeofday(&end, NULL);
-        dt_encode = 1000000 * (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec);
-
-        fprintf(stderr, "capture %d frames, use %lu us; sbc encode %d bytes, use %lu us\n", ret, dt_cap,
-                (int) (_output - output), dt_encode);
-
-        //write(sbc_fd, output, _output - output);
-
-    }
-
-    //close(sbc_fd);
-    free(buffer);
-    free(output);
-    sbc_finish(&sbc);
-    //snd_pcm_drain(pb_handle);
-    snd_pcm_drain(cap_handle);
-    //snd_pcm_close(pb_handle);
-    snd_pcm_close(cap_handle);
-}
-
 
 __always_inline static int read_audio_data(uint8_t *data, size_t count) {
     int ret = 0;
@@ -368,24 +264,4 @@ __always_inline static int read_audio_data(uint8_t *data, size_t count) {
             return ret;
     }
     return ret * count;
-    /*
-    ssize_t size = 0;
-    uint8_t *output = data;
-    while (1) {
-        output += read(audio_fd, data + size, FRAME_SIZE * count - size);
-        size = output - data;
-        if (output - data == FRAME_SIZE * count) {
-            break;
-        } else if (size < 0) {
-            perror("read error");
-            return size;
-        } else if (size < FRAME_SIZE * count) {
-            //fprintf(stderr, "not enough data[%ld]\n", size);
-            return -ENODATA;
-            //return 0;
-        }
-    }
-
-    return FRAME_SIZE;
-     */
 }
