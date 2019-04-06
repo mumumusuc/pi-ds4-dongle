@@ -1,0 +1,36 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/mumumusuc/raspberry/nfs/workspace/ds4/ds4-report.h
+stdint.h
+-
+unistd.h
+-
+
+/home/mumumusuc/raspberry/nfs/workspace/ds4/ds4-sbc.c
+stdio.h
+-
+stdlib.h
+-
+stdint.h
+-
+byteswap.h
+-
+time.h
+-
+signal.h
+-
+sys/time.h
+-
+sbc/sbc.h
+-
+alsa/asoundlib.h
+-
+ds4-report.h
+/home/mumumusuc/raspberry/nfs/workspace/ds4/ds4-report.h
+

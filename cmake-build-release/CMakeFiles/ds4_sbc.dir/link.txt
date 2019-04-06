@@ -1,0 +1,1 @@
+/usr/bin/cc -O3 -DNDEBUG  -rdynamic CMakeFiles/ds4_sbc.dir/ds4-sbc.c.o CMakeFiles/ds4_sbc.dir/ds4-report.c.o  -o ds4_sbc -lasound -lsbc 

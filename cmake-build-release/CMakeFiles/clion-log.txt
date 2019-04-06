@@ -1,0 +1,4 @@
+/home/mumumusuc/apps/clion-2018.2.4/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Release -G "CodeBlocks - Unix Makefiles" /home/mumumusuc/raspberry/nfs/workspace/ds4
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/mumumusuc/raspberry/nfs/workspace/ds4/cmake-build-release

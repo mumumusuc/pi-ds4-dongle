@@ -11,6 +11,7 @@
 #include <sys/ioctl.h>
 #include <linux/hidraw.h>
 #include "crc32.h"
+#include "ds4-report.h"
 
 #define DEBUG           1
 #define USE_TIMER       0
@@ -22,10 +23,11 @@
 
 static char *hid_node = "/dev/hidraw2";
 static uint8_t report_buf[REPORT_SIZE];
+//static uint8_t sample_buf[FRAME_SIZE * 4];
 
 static uint8_t input = 0xa1;
 static uint8_t output = 0xa2;
-static uint8_t header = HEADER_HEADJACK;
+static uint8_t header = HEADER_SPEAKER;
 static uint8_t rumble_weak = 0;
 static uint8_t rumble_strong = 0;
 static uint8_t r = 0;
@@ -44,8 +46,8 @@ static int interrupted = 0;
 static int audio_fd = -1;
 static int hid_fd = -1;
 /* interval = subbands * block / sample(kHZ) * frame_per_packet */
-const size_t frame_interval = 8 * 16 / 16 * 1000 * 4;
-static uint16_t frame;
+size_t frame_interval = 8 * 16 / 16 * 999 * 4;
+static uint16_t frame = 1;
 
 /* See ds4-hid-report.txt */
 #define DS4_REPORT_14_SIZE  270
@@ -66,6 +68,8 @@ static int _18_report(int, uint16_t);
 
 static int _19_report(int, uint16_t);
 
+static int read_audio_data(uint8_t *data, size_t count);
+
 static void on_time() {
     size_t inc;
     int dir = 1;
@@ -73,11 +77,18 @@ static void on_time() {
 #if DEBUG | !USE_TIMER
     size_t dt;
     struct timeval start, end;
-    gettimeofday(&start, NULL);
 #endif
-    inc = _17_report(hid_fd, frame);
-#if DEBUG | !USE_TIMER
+    //if (frame % 4)
+    gettimeofday(&start, NULL);
+    write(hid_fd, report_buf, DS4_REPORT_17_SIZE);
     gettimeofday(&end, NULL);
+    inc = _17_report(hid_fd, frame);
+    frame += inc;
+    //else
+    //inc = _15_report(hid_fd, frame);
+    //frame += inc;
+    //frame_interval = 8 * 16 / 16 * 1000 * 2;
+#if DEBUG | !USE_TIMER
     dt = 1000000 * (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec);
     req.tv_sec = 0;
     req.tv_nsec = (frame_interval - dt) * 1000;
@@ -86,15 +97,18 @@ static void on_time() {
            ", sleep %ld us"
            #endif
            "\n", inc, dt
-           #if !USE_TIMER
+#if !USE_TIMER
             , frame_interval - dt
-           #endif
+#endif
     );
 #if !USE_TIMER
     nanosleep(&req, &rem);
+#else
+    //val.it_value.tv_sec = 0;
+    //val.it_value.tv_usec = frame_interval;
+    //val.it_interval = val.it_value;
 #endif
 #endif
-    frame += inc;
     if (frame > 0xffff)
         frame = 0;
     if (g == 0)
@@ -138,7 +152,7 @@ int main(int argc, char *argv[]) {
     sigaction(SIGPROF, &act, NULL);
     struct itimerval val;
     val.it_value.tv_sec = 0;
-    val.it_value.tv_usec = interval;
+    val.it_value.tv_usec = frame_interval;
     val.it_interval = val.it_value;
     setitimer(ITIMER_PROF, &val, NULL);
 #endif
@@ -212,8 +226,8 @@ __always_inline static void put_unaligned_le32(uint32_t value, uint8_t *buffer) 
 }
 
 __always_inline static void print_report(const uint8_t *buf, size_t size) {
-    /*
-     for (int i = 0; i < size; i++)
+/*
+    for (int i = 0; i < size; i++)
         printf("%02x ", buf[i]);
     puts("\n");
 */
@@ -234,6 +248,7 @@ __always_inline static int read_audio_data(uint8_t *data, size_t count) {
         } else if (size < FRAME_SIZE * count) {
             fprintf(stderr, "not enough data[%ld]\n", size);
             //return -ENODATA;
+            return 0;
         }
     }
     return FRAME_SIZE;
@@ -304,8 +319,8 @@ static int _17_report(int fd, uint16_t frame) {
     put_unaligned_le16(frame, &report_buf[3]);
     report_buf[5] = header;
     offset = 6;
-    offset += read_audio_data(&report_buf[offset], 4);
-
+    read_audio_data(&report_buf[offset], 4);
+    //memcpy(&report_buf[offset], buf, 4 * FRAME_SIZE);
     uint32_t crc = 0xFFFFFFFF;
     crc = crc32_le(crc, &output, 1);
     crc = crc32(crc, report_buf, DS4_REPORT_17_SIZE - 4);
@@ -313,7 +328,7 @@ static int _17_report(int fd, uint16_t frame) {
 #if DEBUG
     print_report(report_buf, DS4_REPORT_17_SIZE);
 #endif
-    write(fd, report_buf, DS4_REPORT_17_SIZE);
+    //write(fd, report_buf, DS4_REPORT_17_SIZE);
     return 4;
 }
 
